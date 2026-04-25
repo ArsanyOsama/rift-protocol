@@ -48,7 +48,7 @@ Material:
     - _QueueOffset: 0
     - _RimIntensity: 10
     m_Colors:
-    - _RimColor: {r: 0, g: 0.4524565, b: 11.98431, a: 1}
+    - _RimColor: {r: 95.87451, g: 41.716858, b: 0, a: 1}
   m_BuildTextureStacks: []
 --- !u!114 &3630168170737321596
 MonoBehaviour:
