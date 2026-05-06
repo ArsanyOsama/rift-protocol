@@ -117,8 +117,6 @@ public class ArenaManager : MonoBehaviour
     private void ValidateReferences()
     {
         if (_camera == null) Debug.LogError("[ArenaManager] Camera not assigned!");
-        if (_fighterA == null) Debug.LogError("[ArenaManager] Fighter A not assigned!");
-        if (_fighterB == null) Debug.LogError("[ArenaManager] Fighter B not assigned!");
     }
 
     private void FixedUpdate()
@@ -166,11 +164,16 @@ public class ArenaManager : MonoBehaviour
 
     private void EnforceMinimumSeparation()
     {
+        // 1. Vertical Check: Are they jumping over each other?
+        // If the height difference is greater than 1.5 units, allow the cross-up!
+        float verticalDist = Mathf.Abs(_fighterB.Position.y - _fighterA.Position.y);
+        if (verticalDist > 1.5f) return;
+
+        // 2. Horizontal Check
         // Use Mathf.Abs to get the true distance, regardless of who is on the left
         float dist = Mathf.Abs(_fighterB.Position.x - _fighterA.Position.x);
 
-        // If they are closer than the minimum allowed distance...
-        // Note: Now using the Inspector variable _minSeparation!
+        // If they are closer than the minimum allowed distance on the ground...
         if (dist < _minSeparation)
         {
             // Calculate half the overlap
@@ -325,7 +328,11 @@ public class ArenaManager : MonoBehaviour
     // ─────────────────────────────────────────────────────────────────────────
     //  PUBLIC API — called by GameManager at round start/end
     // ─────────────────────────────────────────────────────────────────────────
-
+    public void SetFighters(PhysicsBody p1, PhysicsBody p2)
+    {
+        _fighterA = p1;
+        _fighterB = p2;
+    }
     /// <summary>
     /// Resets both fighters to their starting positions for a new round.
     /// Called by GameManager when a round begins.

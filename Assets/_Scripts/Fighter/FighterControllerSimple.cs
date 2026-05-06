@@ -90,10 +90,13 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
             _charState.InHitFreeze)
             return;
 
-        // 2. Route Inputs
-        HandleMovementInput();
-        HandleBlockInput();
-        HandleCombatInput();
+        // 2. ONLY read keyboard if we are NOT the CPU
+        if (GetComponent<BasicAI>() == null)
+        {
+            HandleMovementInput();
+            HandleBlockInput();
+            HandleCombatInput();
+        }
 
         // 3. Update Visuals
         UpdateFacingDirection();

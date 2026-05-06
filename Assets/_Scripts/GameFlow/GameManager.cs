@@ -114,19 +114,25 @@ public class GameManager : MonoBehaviour
             if (playerInput != null) Destroy(playerInput);
         }
 
-        // Wire ArenaManager to both fighters
-        if (ArenaManager.Instance != null)
-            ArenaManager.Instance.ResetFightersToStart();
+        // ---------------------------------------------------------
+        // NEW WIRING CODE STARTS HERE
+        // ---------------------------------------------------------
 
-        // Wire CollisionManager
-        // (CollisionManager reads fighters via IBoxProvider — it needs them in Inspector)
-        // If you're spawning dynamically, assign them here:
-        var cm = CollisionManager.Instance;
-        if (cm != null)
+        var p1Body = _p1Fighter.GetComponent<PhysicsBody>();
+        var p2Body = _p2Fighter.GetComponent<PhysicsBody>();
+
+        // 1. Wire the Camera / Arena Tracker
+        if (ArenaManager.Instance != null)
         {
-            var fighters = FindObjectsOfType<FighterControllerSimple>();
-            // CollisionManager will pick them up via its IBoxProvider cast
-            // Make sure both are assigned in Inspector OR wired dynamically
+            ArenaManager.Instance.SetFighters(p1Body, p2Body);
+            ArenaManager.Instance.ResetFightersToStart();
+            ArenaManager.Instance.SnapCameraToCenter(); // Optional: forces camera to snap instantly
+        }
+
+        // 2. Wire the Collision System
+        if (CollisionManager.Instance != null)
+        {
+            CollisionManager.Instance.SetFighters(_p1Fighter.GetComponent<IBoxProvider>(), _p2Fighter.GetComponent<IBoxProvider>());
         }
     }
 

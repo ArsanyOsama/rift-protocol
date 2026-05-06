@@ -140,11 +140,12 @@ public class CollisionManager : MonoBehaviour
         _fighterA = _fighterASource as IBoxProvider;
         _fighterB = _fighterBSource as IBoxProvider;
 
-        // Warn the developer in the Unity Console if something is wired wrong
-        if (_fighterA == null)
-            Debug.LogError("[CollisionManager] Fighter A does not implement IBoxProvider!");
-        if (_fighterB == null)
-            Debug.LogError("[CollisionManager] Fighter B does not implement IBoxProvider!");
+    }
+
+    public void SetFighters(IBoxProvider p1, IBoxProvider p2)
+    {
+        _fighterA = p1;
+        _fighterB = p2;
     }
 
     /// <summary>
