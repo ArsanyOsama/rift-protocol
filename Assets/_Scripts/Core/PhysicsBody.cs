@@ -171,6 +171,16 @@ public class PhysicsBody : MonoBehaviour
     /// input: -1 = full left, 0 = no movement, +1 = full right.
     ///        Diagonal values (e.g. 0.5) are valid for analog sticks.
     /// </summary>
+    public void SetPositionX(float newX)
+    {
+        // 1. Update our internal math position
+        Position = new Vector2(newX, Position.y);
+
+        // 2. Immediately push that change to the visual Unity Transform
+        transform.position = new Vector3(Position.x, Position.y, transform.position.z);
+    }
+
+
     public void SetMoveInput(float input)
     {
         _moveInput = Mathf.Clamp(input, -1f, 1f);
@@ -195,6 +205,16 @@ public class PhysicsBody : MonoBehaviour
     public void SetVelocity(Vector2 newVelocity)
     {
         Velocity = newVelocity;
+    }
+
+    public void ApplyKnockback(float force)
+    {
+        // Determines push direction based on facing. 
+        // If facing right (Y rotation is 0), push left (-1). If facing left, push right (1).
+        float pushDirection = transform.eulerAngles.y < 90f ? -1f : 1f;
+
+        // Applies the force backward, maintaining current vertical velocity
+        SetVelocity(new Vector2(force * pushDirection * 3f, Velocity.y));
     }
 
     /// <summary>

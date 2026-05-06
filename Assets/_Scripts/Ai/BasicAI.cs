@@ -1,8 +1,8 @@
+// BasicAI.cs — Simple CPU opponent for single-player mode
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// BasicAI.cs — Simple CPU opponent for single-player mode
 public class BasicAI : MonoBehaviour
 {
     [Header("AI Settings")]
