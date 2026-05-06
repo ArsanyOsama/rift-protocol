@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: sira Character Power
+  m_Name: kael character
   m_Shader: {fileID: -6465566751694194690, guid: 15b11556da8819844af85b2021431d0b,
     type: 3}
   m_Parent: {fileID: 0}
@@ -48,7 +48,7 @@ Material:
     - _QueueOffset: 0
     - _RimIntensity: 10
     m_Colors:
-    - _RimColor: {r: 95.87451, g: 50.79956, b: 0, a: 1}
+    - _RimColor: {r: 0.039215688, g: 0.039215688, b: 0.039215688, a: 1}
   m_BuildTextureStacks: []
 --- !u!114 &3630168170737321596
 MonoBehaviour:
