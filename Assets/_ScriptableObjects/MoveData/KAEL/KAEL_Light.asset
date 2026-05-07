@@ -24,6 +24,6 @@ MonoBehaviour:
   knockback: 1.5
   causesKnockdown: 0
   isLauncher: 0
-  hitLevel: 2
-  cancelableIntoSpecial: 0
-  cancelWindowStart: 10
+  hitLevel: 0
+  cancelableIntoSpecial: 1
+  cancelWindowStart: 4

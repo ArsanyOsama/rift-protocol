@@ -38,17 +38,6 @@ public class IdleState : FighterStateBase
 
     public override void OnEnter(FighterStateType previousState) { Physics.StopHorizontal(); }
 
-    public override void OnUpdate(float deltaTime)
-    {
-        if (Mathf.Abs(Physics.Velocity.x) > 0.05f)
-        {
-            float dir = Physics.Velocity.x > 0 ? 1f : -1f;
-            bool movingForward = (dir > 0) == (Fighter.Facing == FacingDirection.Right);
-            Machine.TransitionTo(movingForward ? FighterStateType.WalkForward : FighterStateType.WalkBackward);
-        }
-        if (!Physics.IsGrounded) Machine.TransitionTo(FighterStateType.Falling);
-    }
-
     public override void OnHitReceived(HitEvent hitEvent)
     {
         Machine.TransitionTo(hitEvent.result == HitResult.Blocked ? FighterStateType.BlockingStanding : FighterStateType.HitStunStanding);
@@ -127,22 +116,35 @@ public class FallingState : FighterStateBase
 // ─────────────────────────────────────────────────────────────────────────────
 public abstract class TimedAttackState : FighterStateBase
 {
-    private int _totalDuration;
-    private int _frameCounter;
+    protected int _totalDuration;
+    protected int _frameCounter;
 
     public void SetDuration(int frames) => _totalDuration = frames;
 
     public override void OnEnter(FighterStateType previousState)
     {
-        _frameCounter = 0;
+        _frameCounter = 0; // Reset the stopwatch every time an attack starts!
         Physics.StopHorizontal();
     }
 
     public override void OnUpdate(float deltaTime)
     {
         _frameCounter++;
-        if (_frameCounter >= _totalDuration)
+
+        // 1. THE LANDING CANCEL MECHANIC
+        // If this is an air attack AND the physics body touches the ground, cancel the attack instantly!
+        if ((StateType == FighterStateType.AirLightPunch || StateType == FighterStateType.AirHeavyKick) && Physics.IsGrounded)
+        {
             Machine.TransitionTo(FighterStateType.Idle);
+            return;
+        }
+
+        // 2. NORMAL RECOVERY
+        // If the timer runs out, return to Idle (or Falling if still in the air)
+        if (_frameCounter >= _totalDuration)
+        {
+            Machine.TransitionTo(Physics.IsGrounded ? FighterStateType.Idle : FighterStateType.Falling);
+        }
     }
 
     public override void OnHitReceived(HitEvent e)

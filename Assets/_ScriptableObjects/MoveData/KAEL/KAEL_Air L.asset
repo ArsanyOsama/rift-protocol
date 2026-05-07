@@ -10,20 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 2cf6d8a92624d24469a38f21ed35cb44, type: 3}
-  m_Name: KAEL_Heavy
+  m_Name: KAEL_Air L
   m_EditorClassIdentifier: 
-  moveName: KAEL_Heavy
-  stateType: 10
-  startupFrames: 14
-  activeFrames: 5
-  recoveryFrames: 22
-  hitstunFrames: 0
+  moveName: KAEL_Air L
+  stateType: 14
+  startupFrames: 5
+  activeFrames: 4
+  recoveryFrames: 12
+  hitstunFrames: 8
   blockstunFrames: 8
-  hitFreezeFrames: 4
-  damage: 22
-  knockback: 4.5
-  causesKnockdown: 1
+  hitFreezeFrames: 2
+  damage: 6
+  knockback: 1
+  causesKnockdown: 0
   isLauncher: 0
-  hitLevel: 0
+  hitLevel: 3
   cancelableIntoSpecial: 0
-  cancelWindowStart: 10
+  cancelWindowStart: -1

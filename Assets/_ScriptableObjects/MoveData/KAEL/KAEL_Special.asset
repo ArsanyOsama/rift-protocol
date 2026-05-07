@@ -15,15 +15,15 @@ MonoBehaviour:
   moveName: KAEL_Special
   stateType: 16
   startupFrames: 10
-  activeFrames: 3
+  activeFrames: 20
   recoveryFrames: 28
   hitstunFrames: 18
-  blockstunFrames: 8
-  hitFreezeFrames: 3
+  blockstunFrames: 16
+  hitFreezeFrames: 4
   damage: 18
-  knockback: 1.5
+  knockback: 3
   causesKnockdown: 0
   isLauncher: 0
-  hitLevel: 0
+  hitLevel: 1
   cancelableIntoSpecial: 0
-  cancelWindowStart: 10
+  cancelWindowStart: -1

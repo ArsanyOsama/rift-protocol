@@ -2000,7 +2000,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6388171759155468361}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: -1, z: 0, w: 0}
+  m_LocalRotation: {x: -0, y: -0.7071068, z: 0, w: -0.7071068}
   m_LocalPosition: {x: 2.5, y: 0, z: 0.972}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2010,7 +2010,7 @@ Transform:
   - {fileID: 1952623033913687411}
   - {fileID: 5737897276147836565}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: -180, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -270, z: 0}
 --- !u!114 &2307215593836693545
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2024,10 +2024,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerIndex: 0
-  moveLight: {fileID: 0}
-  moveMedium: {fileID: 0}
-  moveHeavy: {fileID: 0}
-  moveSpecial: {fileID: 0}
+  moveLight: {fileID: 11400000, guid: 760b9cf5f1b3a124682a3c7cb94ec2b0, type: 2}
+  moveMedium: {fileID: 11400000, guid: ba815b575f744834ebd41be2eb47261e, type: 2}
+  moveHeavy: {fileID: 11400000, guid: bd2ea0da69a2a3b4385504b285b00b3a, type: 2}
+  moveSpecial: {fileID: 11400000, guid: ab69dfde5a5815743b44cdb85a12ba95, type: 2}
+  moveCrouchLight: {fileID: 11400000, guid: 7f7d8b55ce87dca4196f6820aa93349b, type: 2}
+  moveCrouchMedium: {fileID: 11400000, guid: 8dbf0f65ca5c65e4db66a65c06e4315d, type: 2}
+  moveCrouchHeavy: {fileID: 11400000, guid: 503994f40d6a5054a9ff14b6cb6a3ab0, type: 2}
+  moveAirLight: {fileID: 11400000, guid: 85a67cf434ad2ef488cd6d714aed7126, type: 2}
+  moveAirMedium: {fileID: 11400000, guid: 33eeca364fea46f4eb582b7424025f64, type: 2}
+  moveAirHeavy: {fileID: 11400000, guid: 9a005d54cd7f9914da86c4a25f62f998, type: 2}
   keyLeft: 97
   keyRight: 100
   keyCrouch: 115
@@ -2090,8 +2096,8 @@ Animator:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6388171759155468361}
   m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
+  m_Avatar: {fileID: 9000000, guid: e78e99320deb16745a028e4ec5dec47c, type: 3}
+  m_Controller: {fileID: 9100000, guid: 1b79a40ed5dfcae458a2e34f01c62ec0, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0

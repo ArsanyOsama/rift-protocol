@@ -11,11 +11,21 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
     [Header("Identity")]
     public int playerIndex = 0;
 
-    [Header("Move Data")]
+    [Header("Combat Config - Standing")]
     public MoveData moveLight;
     public MoveData moveMedium;
     public MoveData moveHeavy;
     public MoveData moveSpecial;
+
+    [Header("Combat Config - Crouching")]
+    public MoveData moveCrouchLight;
+    public MoveData moveCrouchMedium;
+    public MoveData moveCrouchHeavy;
+
+    [Header("Combat Config - Aerial")]
+    public MoveData moveAirLight;
+    public MoveData moveAirMedium;
+    public MoveData moveAirHeavy;
 
     [Header("Input Keys")]
     public KeyCode keyLeft = KeyCode.A;
@@ -55,6 +65,8 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
     public bool IsBlocking => _machine.IsBlocking;
     public bool IsCrouching => _machine.CurrentStateType == FighterStateType.Crouching || _machine.CurrentStateType == FighterStateType.BlockingCrouching;
     public IReadOnlyList<BoxData> GetActiveBoxes() => _activeBoxes;
+
+    private Transform _opponentTarget;
 
     void Awake()
     {
@@ -146,14 +158,50 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
         }
     }
 
-    void HandleCombatInput()
+    private void HandleCombatInput()
     {
-        if (_machine.IsStunned || _machine.IsAttacking) return;
+        // LIGHT ATTACK
+        if (Input.GetKeyDown(keyLight))
+        {
+            if (_machine.IsAirborne)
+                StartAttack(moveAirLight, FighterStateType.AirLightPunch, hitboxLight, "AirLight");
+            else if (IsCrouching)
+                StartAttack(moveCrouchLight, FighterStateType.LightKick, hitboxLight, "CrouchLight");
+            else
+                StartAttack(moveLight, FighterStateType.LightPunch, hitboxLight, "LightPunch");
+        }
 
-        if (Input.GetKeyDown(keyLight)) StartAttack(moveLight, FighterStateType.LightPunch, hitboxLight, "LightAttack");
-        else if (Input.GetKeyDown(keyMedium)) StartAttack(moveMedium, FighterStateType.MediumPunch, hitboxMedium, "MediumAttack");
-        else if (Input.GetKeyDown(keyHeavy)) StartAttack(moveHeavy, FighterStateType.HeavyPunch, hitboxHeavy, "HeavyAttack");
-        else if (Input.GetKeyDown(keySpecial)) StartAttack(moveSpecial, FighterStateType.SpecialMove, hitboxSpecial, "SpecialMove");
+        // MEDIUM ATTACK
+        if (Input.GetKeyDown(keyMedium))
+        {
+            if (_machine.IsAirborne)
+                StartAttack(moveAirMedium, FighterStateType.AirLightPunch, hitboxMedium, "AirMedium");
+            else if (IsCrouching)
+                StartAttack(moveCrouchMedium, FighterStateType.MediumKick, hitboxMedium, "CrouchMedium");
+            else
+                StartAttack(moveMedium, FighterStateType.MediumPunch, hitboxMedium, "MediumPunch");
+        }
+
+        // HEAVY ATTACK
+        if (Input.GetKeyDown(keyHeavy))
+        {
+            if (_machine.IsAirborne)
+                StartAttack(moveAirHeavy, FighterStateType.AirHeavyKick, hitboxHeavy, "AirHeavy");
+            else if (IsCrouching)
+                StartAttack(moveCrouchHeavy, FighterStateType.HeavyKick, hitboxHeavy, "CrouchHeavy");
+            else
+                StartAttack(moveHeavy, FighterStateType.HeavyPunch, hitboxHeavy, "HeavyPunch");
+        }
+
+        // SPECIAL MOVE
+        if (Input.GetKeyDown(keySpecial))
+        {
+            // Specials are usually ground-only, so we prevent them in the air
+            if (!_machine.IsAirborne)
+            {
+                StartAttack(moveSpecial, FighterStateType.SpecialMove, hitboxSpecial, "SpecialMove");
+            }
+        }
     }
 
     void StartAttack(MoveData move, FighterStateType state, GameObject hitbox, string trigger)
@@ -164,16 +212,23 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
         _currentHitbox = hitbox;
 
         // Route to Brain 1 (StateMachine)
-        _machine.TransitionTo(state);
+        bool success = _machine.TransitionTo(state);
+        if (!success) return; // Prevent attack if StateMachine denies the transition
 
         // Dynamically set state duration based on frame data
         int duration = move.startupFrames + move.activeFrames + move.recoveryFrames;
+
         var method = state switch
         {
             FighterStateType.LightPunch => (System.Action)(() => _machine.GetState<LightPunchState>()?.SetDuration(duration)),
             FighterStateType.MediumPunch => () => _machine.GetState<MediumPunchState>()?.SetDuration(duration),
             FighterStateType.HeavyPunch => () => _machine.GetState<HeavyPunchState>()?.SetDuration(duration),
+            FighterStateType.LightKick => () => _machine.GetState<LightKickState>()?.SetDuration(duration),
+            FighterStateType.MediumKick => () => _machine.GetState<MediumKickState>()?.SetDuration(duration),
+            FighterStateType.HeavyKick => () => _machine.GetState<HeavyKickState>()?.SetDuration(duration),
             FighterStateType.SpecialMove => () => _machine.GetState<SpecialMoveState>()?.SetDuration(duration),
+            FighterStateType.AirLightPunch => () => _machine.GetState<AirLightPunchState>()?.SetDuration(duration),
+            FighterStateType.AirHeavyKick => () => _machine.GetState<AirHeavyKickState>()?.SetDuration(duration),
             _ => () => { }
         };
         method();
@@ -248,14 +303,25 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
 
     void UpdateFacingDirection()
     {
-        FighterControllerSimple[] fighters = FindObjectsOfType<FighterControllerSimple>();
-        foreach (var other in fighters)
+        // 1. Find the opponent once and remember them
+        if (_opponentTarget == null)
         {
-            if (other == this) continue;
-            bool opponentRight = other.transform.position.x > transform.position.x;
-            Facing = opponentRight ? FacingDirection.Right : FacingDirection.Left;
-            transform.rotation = Quaternion.Euler(0f, Facing == FacingDirection.Right ? 0f : 180f, 0f);
+            FighterControllerSimple[] players = FindObjectsOfType<FighterControllerSimple>();
+            foreach (var player in players)
+            {
+                if (player != this) _opponentTarget = player.transform;
+            }
+
+            // If the opponent hasn't spawned yet, do nothing
+            if (_opponentTarget == null) return;
         }
+
+        // 2. Turn to face the opponent's X position!
+        bool opponentRight = _opponentTarget.position.x > transform.position.x;
+        Facing = opponentRight ? FacingDirection.Right : FacingDirection.Left;
+
+        // 3. Smoothly snap the 3D model to standard side-view fighting angles
+        transform.rotation = Quaternion.Euler(0f, Facing == FacingDirection.Right ? 90f : -90f, 0f);
     }
 
     void SyncAnimator()

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cf6d8a92624d24469a38f21ed35cb44, type: 3}
+  m_Name: HEMDAN_Medium
+  m_EditorClassIdentifier: 
+  moveName: HEMDAN_Medium
+  stateType: 9
+  startupFrames: 11
+  activeFrames: 5
+  recoveryFrames: 20
+  hitstunFrames: 18
+  blockstunFrames: 14
+  hitFreezeFrames: 4
+  damage: 18
+  knockback: 3.5
+  causesKnockdown: 0
+  isLauncher: 0
+  hitLevel: 1
+  cancelableIntoSpecial: 1
+  cancelWindowStart: 11

@@ -18,12 +18,12 @@ MonoBehaviour:
   activeFrames: 4
   recoveryFrames: 14
   hitstunFrames: 16
-  blockstunFrames: 8
-  hitFreezeFrames: 3
+  blockstunFrames: 10
+  hitFreezeFrames: 2
   damage: 14
   knockback: 2.5
   causesKnockdown: 0
   isLauncher: 0
   hitLevel: 1
   cancelableIntoSpecial: 1
-  cancelWindowStart: 10
+  cancelWindowStart: 7
