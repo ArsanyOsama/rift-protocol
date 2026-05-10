@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveName: HEMDAN_Crouch L
   stateType: 11
+  attackType: 1
   startupFrames: 6
   activeFrames: 4
   recoveryFrames: 10
@@ -27,3 +28,6 @@ MonoBehaviour:
   hitLevel: 2
   cancelableIntoSpecial: 1
   cancelWindowStart: 6
+  startupSFX: {fileID: 0}
+  specialSFX: {fileID: 0}
+  screenShakeForce: 0

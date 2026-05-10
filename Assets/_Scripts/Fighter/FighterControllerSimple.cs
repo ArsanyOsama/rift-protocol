@@ -1,15 +1,22 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Cinemachine;
 
 [RequireComponent(typeof(PhysicsBody))]
-[RequireComponent(typeof(StateMachine))]   // Brain 1: Movement/Animation
-[RequireComponent(typeof(CharacterState))] // Brain 2: Combat/Stats
+[RequireComponent(typeof(StateMachine))]
+[RequireComponent(typeof(CharacterState))]
 [RequireComponent(typeof(Animator))]
+[RequireComponent(typeof(InputBuffer))]
 public class FighterControllerSimple : MonoBehaviour, IBoxProvider
 {
+    [Header("Components")]
+    public CinemachineImpulseSource impulseSource;
+
     [Header("Identity")]
     public int playerIndex = 0;
+
+    [HideInInspector] public bool inputLocked = false;
 
     [Header("Combat Config - Standing")]
     public MoveData moveLight;
@@ -32,11 +39,7 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
     public KeyCode keyRight = KeyCode.D;
     public KeyCode keyCrouch = KeyCode.S;
     public KeyCode keyJump = KeyCode.W;
-    public KeyCode keyLight = KeyCode.J;
-    public KeyCode keyMedium = KeyCode.K;
-    public KeyCode keyHeavy = KeyCode.L;
     public KeyCode keyBlock = KeyCode.LeftShift;
-    public KeyCode keySpecial = KeyCode.U;
 
     [Header("Hitboxes")]
     public GameObject hitboxLight;
@@ -48,17 +51,29 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
 
     public HitFlashController hitFlash;
 
-    // The Systems
     private PhysicsBody _physics;
-    private StateMachine _machine;     // Brain 1
-    private CharacterState _charState; // Brain 2
+    private StateMachine _machine;
+    private CharacterState _charState;
     private Animator _animator;
+    private InputBuffer _inputBuffer;
 
     private MoveData _currentMove;
     private GameObject _currentHitbox;
     private readonly List<BoxData> _activeBoxes = new List<BoxData>();
 
-    // --- IBoxProvider Implementation ---
+    // [FIX 4] Combo Tracking Fields
+    private int _comboCounter = 0;
+    private float _comboResetTimer = 0f;
+    private const float COMBO_RESET = 2.0f;
+
+    public void SpawnHitSpark(Vector3 position, bool isHeavy) { }
+    public void SpawnAtHand(string key, Transform character) { }
+    public void TriggerSpecialFlash() { }
+    public void TriggerKOFlash() { }
+    public void TriggerVictoryAura(MonoBehaviour fighter) { }
+    public void SetComboTrail(bool active, int comboCount) { }
+    public void Play(string key) { }
+
     public int PlayerIndex => playerIndex;
     public Vector2 Position => _physics.Position;
     public FacingDirection Facing { get; private set; } = FacingDirection.Right;
@@ -74,8 +89,8 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
         _machine = GetComponent<StateMachine>();
         _charState = GetComponent<CharacterState>();
         _animator = GetComponent<Animator>();
+        _inputBuffer = GetComponent<InputBuffer>();
 
-        // Ensure CharacterState knows its player index
         _charState.playerIndex = this.playerIndex;
     }
 
@@ -96,13 +111,12 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
 
     void Update()
     {
-        // 1. Check BOTH Brains for locks
         if (_machine.CurrentStateType == FighterStateType.Dead ||
             _machine.CurrentStateType == FighterStateType.Victory ||
-            _charState.InHitFreeze)
+            _charState.InHitFreeze ||
+            inputLocked)
             return;
 
-        // 2. ONLY read keyboard if we are NOT the CPU
         if (GetComponent<BasicAI>() == null)
         {
             HandleMovementInput();
@@ -110,10 +124,20 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
             HandleCombatInput();
         }
 
-        // 3. Update Visuals
         UpdateFacingDirection();
         UpdateHurtbox();
-        SyncAnimator();
+
+        // [FIX 4] Drop the combo if too much time passes
+        if (_comboResetTimer > 0f)
+        {
+            _comboResetTimer -= Time.deltaTime;
+            if (_comboResetTimer <= 0f)
+            {
+                _comboCounter = 0;
+                GetComponent<MoveExecutor>()?.NotifyCombo(0);
+                HUDController.Instance?.UpdatePower(playerIndex, 0f);
+            }
+        }
     }
 
     void HandleMovementInput()
@@ -138,13 +162,6 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
         {
             _machine.TransitionTo(FighterStateType.Idle);
         }
-
-        if (Input.GetKeyDown(keyJump) && _physics.IsGrounded)
-        {
-            _physics.RequestJump();
-            _machine.TransitionTo(FighterStateType.JumpNeutral);
-            _animator.SetTrigger("Jump");
-        }
     }
 
     void HandleBlockInput()
@@ -160,62 +177,104 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
 
     private void HandleCombatInput()
     {
-        // LIGHT ATTACK
-        if (Input.GetKeyDown(keyLight))
-        {
-            if (_machine.IsAirborne)
-                StartAttack(moveAirLight, FighterStateType.AirLightPunch, hitboxLight, "AirLight");
-            else if (IsCrouching)
-                StartAttack(moveCrouchLight, FighterStateType.LightKick, hitboxLight, "CrouchLight");
-            else
-                StartAttack(moveLight, FighterStateType.LightPunch, hitboxLight, "LightPunch");
-        }
+        if (_inputBuffer == null) return;
+        if (inputLocked) return;
 
-        // MEDIUM ATTACK
-        if (Input.GetKeyDown(keyMedium))
-        {
-            if (_machine.IsAirborne)
-                StartAttack(moveAirMedium, FighterStateType.AirLightPunch, hitboxMedium, "AirMedium");
-            else if (IsCrouching)
-                StartAttack(moveCrouchMedium, FighterStateType.MediumKick, hitboxMedium, "CrouchMedium");
-            else
-                StartAttack(moveMedium, FighterStateType.MediumPunch, hitboxMedium, "MediumPunch");
-        }
+        var inp = _inputBuffer.Current;
+        var exec = GetComponent<MoveExecutor>();
 
-        // HEAVY ATTACK
-        if (Input.GetKeyDown(keyHeavy))
+        // ── Specials FIRST (QCF/QCB must beat normals) ─────────────────
+        if (!_machine.IsAirborne)
         {
-            if (_machine.IsAirborne)
-                StartAttack(moveAirHeavy, FighterStateType.AirHeavyKick, hitboxHeavy, "AirHeavy");
-            else if (IsCrouching)
-                StartAttack(moveCrouchHeavy, FighterStateType.HeavyKick, hitboxHeavy, "CrouchHeavy");
-            else
-                StartAttack(moveHeavy, FighterStateType.HeavyPunch, hitboxHeavy, "HeavyPunch");
-        }
-
-        // SPECIAL MOVE
-        if (Input.GetKeyDown(keySpecial))
-        {
-            // Specials are usually ground-only, so we prevent them in the air
-            if (!_machine.IsAirborne)
+            if (_inputBuffer.CheckQCF("light") || _inputBuffer.CheckQCF("heavy"))
             {
-                StartAttack(moveSpecial, FighterStateType.SpecialMove, hitboxSpecial, "SpecialMove");
+                if (StartAttack(moveSpecial, FighterStateType.SpecialMove, hitboxSpecial, "SpecialMove"))
+                {
+                    exec?.NotifySpecialActivated(moveSpecial);
+                    return;
+                }
             }
+            if (_inputBuffer.CheckQCB("light") || _inputBuffer.CheckQCB("heavy"))
+            {
+                if (StartAttack(moveSpecial, FighterStateType.SpecialMove, hitboxSpecial, "SpecialMove"))
+                {
+                    exec?.NotifySpecialActivated(moveSpecial);
+                    return;
+                }
+            }
+        }
+
+        // ── Dash ──────────────────────────────────────────────────────
+        if (_inputBuffer.CheckDash(out DashDirection dashDir) &&
+            _machine.CurrentStateType == FighterStateType.Idle)
+        {
+            exec?.NotifyDash(dashDir);
+            return;
+        }
+
+        // ── Normal attacks ────────────────────────────────────────────
+        if (inp.lightPressed)
+        {
+            MoveData move = _machine.IsAirborne ? moveAirLight : IsCrouching ? moveCrouchLight : moveLight;
+            FighterStateType st = _machine.IsAirborne ? FighterStateType.AirLightPunch : IsCrouching ? FighterStateType.LightKick : FighterStateType.LightPunch;
+            string trigger = _machine.IsAirborne ? "AirLight" : IsCrouching ? "CrouchLight" : "LightAttack";
+
+            if (StartAttack(move, st, hitboxLight, trigger))
+                exec?.NotifyAttackStarted(move);
+        }
+        else if (inp.medPressed) // FIXED to medPressed
+        {
+            MoveData move = _machine.IsAirborne ? moveAirMedium : IsCrouching ? moveCrouchMedium : moveMedium;
+            FighterStateType st = _machine.IsAirborne ? FighterStateType.AirHeavyKick : IsCrouching ? FighterStateType.MediumKick : FighterStateType.MediumPunch;
+            string trigger = _machine.IsAirborne ? "AirMedium" : IsCrouching ? "CrouchMedium" : "MediumAttack";
+
+            if (StartAttack(move, st, hitboxMedium, trigger))
+                exec?.NotifyAttackStarted(move);
+        }
+        else if (inp.heavyPressed)
+        {
+            MoveData move = _machine.IsAirborne ? moveAirHeavy : IsCrouching ? moveCrouchHeavy : moveHeavy;
+            FighterStateType st = _machine.IsAirborne ? FighterStateType.AirHeavyKick : IsCrouching ? FighterStateType.HeavyKick : FighterStateType.HeavyPunch;
+            string trigger = _machine.IsAirborne ? "AirHeavy" : IsCrouching ? "CrouchHeavy" : "HeavyAttack";
+
+            if (StartAttack(move, st, hitboxHeavy, trigger))
+                exec?.NotifyAttackStarted(move);
+        }
+
+        // ── Block ─────────────────────────────────────────────────────
+        if (inp.back && _physics.IsGrounded && !_machine.IsAttacking)
+        {
+            _machine.TransitionTo(IsCrouching
+                ? FighterStateType.BlockingCrouching
+                : FighterStateType.BlockingStanding);
+        }
+
+        // ── Jump ──────────────────────────────────────────────────────
+        if (inp.up && _physics.IsGrounded && !_machine.IsStunned)
+        {
+            _physics.RequestJump();
+            _machine.TransitionTo(FighterStateType.JumpNeutral);
+            GetComponent<MoveExecutor>()?.NotifyJump();
+        }
+
+        // ── Taunt ────────────────────────────────────────────────────
+        if (inp.tauntPressed && _machine.CurrentStateType == FighterStateType.Idle)
+        {
+            GetComponent<MoveExecutor>()?.NotifyTaunt();
+            _animator.SetTrigger("Taunt");
         }
     }
 
-    void StartAttack(MoveData move, FighterStateType state, GameObject hitbox, string trigger)
+    bool StartAttack(MoveData move, FighterStateType state, GameObject hitbox, string trigger)
     {
-        if (move == null) return;
+        if (move == null) return false;
 
         _currentMove = move;
         _currentHitbox = hitbox;
 
-        // Route to Brain 1 (StateMachine)
         bool success = _machine.TransitionTo(state);
-        if (!success) return; // Prevent attack if StateMachine denies the transition
+        if (!success) return false;
 
-        // Dynamically set state duration based on frame data
         int duration = move.startupFrames + move.activeFrames + move.recoveryFrames;
 
         var method = state switch
@@ -234,39 +293,48 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
         method();
 
         _animator.SetTrigger(trigger);
+        return true;
     }
 
-    // --- The Cooperative Hit Handler ---
     void HandleHitConfirmed(HitEvent e)
     {
-        if (e.defenderIndex != playerIndex || _machine.CurrentStateType == FighterStateType.Dead) return;
+        // [FIX 4] Defender side (receiving the hit)
+        if (e.defenderIndex == playerIndex && _machine.CurrentStateType != FighterStateType.Dead)
+        {
+            bool isBlocked = e.result == HitResult.Blocked;
 
-        bool isBlocked = e.result == HitResult.Blocked;
+            _charState.TakeDamage(
+                damage: e.damageDealt,
+                hitstun: e.sourceBox.hitstunFrames,
+                blockstun: e.sourceBox.blockstunFrames,
+                knockback: e.sourceBox.knockback,
+                causesKnockdown: e.sourceBox.damage >= 22,
+                isBlocked: isBlocked,
+                hitFreezeFrames: e.sourceBox.damage >= 22 ? 4 : 2
+            );
 
-        // Brain 2 (CharacterState) handles the HP, Hit Freeze, and Combos
-        _charState.TakeDamage(
-            damage: e.damageDealt,
-            hitstun: e.sourceBox.hitstunFrames,
-            blockstun: e.sourceBox.blockstunFrames,
-            knockback: e.sourceBox.knockback,
-            causesKnockdown: e.sourceBox.damage >= 22,
-            isBlocked: isBlocked,
-            hitFreezeFrames: e.sourceBox.damage >= 22 ? 4 : 2
-        );
+            _machine.NotifyHitReceived(e);
+            StartCoroutine(HitFreeze(e.sourceBox.damage >= 22 ? 4 : 2));
+        }
 
-        // Brain 1 (StateMachine) handles the Stun/Block Animations
-        _machine.NotifyHitReceived(e);
+        // [FIX 4] Attacker side — combo tracking
+        if (e.attackerIndex == playerIndex && e.result == HitResult.Hit)
+        {
+            _comboCounter++;
+            _comboResetTimer = COMBO_RESET;
 
-        // Visuals
-        hitFlash?.StartFlash();
-        StartCoroutine(HitFreeze(e.sourceBox.damage >= 22 ? 4 : 2));
+            GetComponent<MoveExecutor>()?.NotifyCombo(_comboCounter);
+
+            float powerNorm = Mathf.Clamp01(_comboCounter / 10f);
+            HUDController.Instance?.UpdatePower(playerIndex, powerNorm);
+        }
     }
 
-    private IEnumerator HitFreeze(int frames)
+    private IEnumerator HitFreeze(int freezeFrames)
     {
         Time.timeScale = 0.05f;
-        for (int i = 0; i < frames; i++) yield return new WaitForFixedUpdate();
-        Time.timeScale = 1f;
+        yield return new WaitForSecondsRealtime(freezeFrames / 60f);
+        Time.timeScale = 1.0f;
     }
 
     public void OnAttackImpactFrame()
@@ -303,7 +371,6 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
 
     void UpdateFacingDirection()
     {
-        // 1. Find the opponent once and remember them
         if (_opponentTarget == null)
         {
             FighterControllerSimple[] players = FindObjectsOfType<FighterControllerSimple>();
@@ -312,24 +379,56 @@ public class FighterControllerSimple : MonoBehaviour, IBoxProvider
                 if (player != this) _opponentTarget = player.transform;
             }
 
-            // If the opponent hasn't spawned yet, do nothing
             if (_opponentTarget == null) return;
         }
 
-        // 2. Turn to face the opponent's X position!
         bool opponentRight = _opponentTarget.position.x > transform.position.x;
         Facing = opponentRight ? FacingDirection.Right : FacingDirection.Left;
-
-        // 3. Smoothly snap the 3D model to standard side-view fighting angles
         transform.rotation = Quaternion.Euler(0f, Facing == FacingDirection.Right ? 90f : -90f, 0f);
     }
 
-    void SyncAnimator()
+    void OnSpecialActivated()
     {
-        _animator.SetFloat("Speed", Mathf.Abs(_physics.Velocity.x));
-        _animator.SetBool("IsGrounded", _physics.IsGrounded);
-        _animator.SetBool("IsCrouching", IsCrouching);
-        _animator.SetBool("IsBlocking", IsBlocking);
-        _animator.SetBool("IsAirborne", _machine.IsAirborne);
+        StartCoroutine(SpecialActivationBeat());
+    }
+
+    IEnumerator SpecialActivationBeat()
+    {
+        Time.timeScale = 0.4f;
+        yield return new WaitForSecondsRealtime(0.08f);
+        Time.timeScale = 1.0f;
+
+        impulseSource?.GenerateImpulse(new Vector3(0f, -0.3f, 0f));
+
+        // Hook up your actual particle spawner here later!
+        // HitEffectsManager.Instance?.SpawnSpecialActivationVFX(transform.position, playerIndex);
+    }
+
+    // ── AI SIMULATION METHODS ──
+    public void SimulateJump()
+    {
+        if (_physics.IsGrounded)
+        {
+            _physics.RequestJump();
+            _machine.TransitionTo(FighterStateType.JumpNeutral);
+        }
+    }
+
+    public void SimulateBlock(bool block)
+    {
+        if (block && _physics.IsGrounded && !_machine.IsAttacking)
+            _machine.TransitionTo(IsCrouching ? FighterStateType.BlockingCrouching : FighterStateType.BlockingStanding);
+    }
+
+    public void SimulateAttack(AttackWeight weight)
+    {
+        if (weight == AttackWeight.Light) StartAttack(moveLight, FighterStateType.LightPunch, hitboxLight, "LightAttack");
+        else if (weight == AttackWeight.Medium) StartAttack(moveMedium, FighterStateType.MediumPunch, hitboxMedium, "MediumAttack");
+        else StartAttack(moveHeavy, FighterStateType.HeavyPunch, hitboxHeavy, "HeavyAttack");
+    }
+
+    public void SimulateSpecial()
+    {
+        StartAttack(moveSpecial, FighterStateType.SpecialMove, hitboxSpecial, "SpecialMove");
     }
 }

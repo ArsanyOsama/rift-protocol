@@ -1,7 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
 
 public enum CharState
 {
@@ -16,65 +16,72 @@ public enum CharState
     BlockingStanding, BlockingCrouching,
     HitStunStanding, HitStunCrouching,
     KnockdownFalling, KnockdownGround, WakeUp,
-    LaunchState,    // airborne, vulnerable to air juggle
+    LaunchState,
     Dead, Victory
 }
-
-
 
 [RequireComponent(typeof(PhysicsBody))]
 public class CharacterState : MonoBehaviour
 {
-    // ── Current State ─────────────────────────────────────────
     public CharState CurrentState { get; private set; } = CharState.Idle;
     public CharState PreviousState { get; private set; } = CharState.Idle;
 
-    // ── Health ─────────────────────────────────────────────────
     [Header("Health")]
     public int maxHP = 200;
     public int currentHP;
-    public event Action<int, int> OnHPChanged;   // (current, max)
-    public event Action<int> OnDied;           // playerIndex
 
-    // ── Facing ─────────────────────────────────────────────────
+    public event Action<int, int> OnHPChanged;
+    public event Action<int> OnDied;
+
+    public event Action<CharState> OnStateChanged;
+    public event Action<bool> OnBlockStateChange;
+
     public FacingDirection Facing { get; private set; } = FacingDirection.Right;
 
-    // ── Frame Counters ─────────────────────────────────────────
     public int hitstunFramesRemaining { get; private set; }
     public int blockstunFramesRemaining { get; private set; }
     public int hitFreezeFramesRemaining { get; private set; }
     public bool InHitFreeze => hitFreezeFramesRemaining > 0;
     public bool InHitStun => hitstunFramesRemaining > 0;
 
-    // ── Combo ──────────────────────────────────────────────────
     public int comboCount { get; private set; }
     public event Action<int> OnComboUpdated;
 
-    // ── Player Identity ────────────────────────────────────────
     [Header("Identity")]
-    public int playerIndex = 0;   // 0 = P1, 1 = P2
+    public int playerIndex = 0;
 
-    // ── Internal ───────────────────────────────────────────────
     private PhysicsBody _body;
     private Animator _animator;
+    private StateMachine _machine; // [FIX 1] Added StateMachine Reference
     private bool _dead;
+    private bool _wasBlocking;
 
     void Awake()
     {
         currentHP = maxHP;
         _body = GetComponent<PhysicsBody>();
         _animator = GetComponent<Animator>();
+        _machine = GetComponent<StateMachine>(); // [FIX 1] Get Reference
+
+        // [FIX 1] When HP hits 0, drive StateMachine to Dead
+        OnDied += (idx) => _machine?.ForceTransition(FighterStateType.Dead);
     }
 
-    // ── Transition ─────────────────────────────────────────────
     public void ForceTransition(CharState next)
     {
         if (CurrentState == next) return;
         PreviousState = CurrentState;
         CurrentState = next;
+        OnStateChanged?.Invoke(CurrentState);
+
+        bool isNowBlocking = (next == CharState.BlockingStanding || next == CharState.BlockingCrouching);
+        if (isNowBlocking != _wasBlocking)
+        {
+            OnBlockStateChange?.Invoke(isNowBlocking);
+            _wasBlocking = isNowBlocking;
+        }
     }
 
-    // ── Take Damage (called by CollisionManager via GameManager) ─
     public void TakeDamage(int damage, int hitstun, int blockstun,
                            float knockback, bool causesKnockdown,
                            bool isBlocked, int hitFreezeFrames = 2)
@@ -114,8 +121,16 @@ public class CharacterState : MonoBehaviour
         }
 
         OnHPChanged?.Invoke(currentHP, maxHP);
-
         if (currentHP <= 0) Die();
+    }
+
+    // ADD this method to CharacterState.cs — called by GameManager on round start
+    public void ResetHP()
+    {
+        _dead = false;
+        currentHP = maxHP;
+        OnHPChanged?.Invoke(currentHP, maxHP);
+        ForceTransition(CharState.Idle);
     }
 
     void Die()
@@ -127,16 +142,17 @@ public class CharacterState : MonoBehaviour
         OnDied?.Invoke(playerIndex);
     }
 
-    // ── Fixed Update — decrement frame counters ────────────────
     void FixedUpdate()
     {
         if (hitFreezeFramesRemaining > 0) hitFreezeFramesRemaining--;
+
         if (hitstunFramesRemaining > 0)
         {
             hitstunFramesRemaining--;
             if (hitstunFramesRemaining == 0 && CurrentState == CharState.HitStunStanding)
                 ForceTransition(CharState.Idle);
         }
+
         if (blockstunFramesRemaining > 0)
         {
             blockstunFramesRemaining--;
@@ -145,11 +161,9 @@ public class CharacterState : MonoBehaviour
         }
     }
 
-    // ── Combo Tracking ─────────────────────────────────────────
     public void IncrementCombo() { comboCount++; OnComboUpdated?.Invoke(comboCount); }
     public void ResetCombo() { comboCount = 0; OnComboUpdated?.Invoke(0); }
 
-    // ── Full HP Reset (called between rounds) ─────────────────
     public void ResetToFull()
     {
         _dead = false;
@@ -160,6 +174,8 @@ public class CharacterState : MonoBehaviour
         OnHPChanged?.Invoke(currentHP, maxHP);
     }
 
-    // ── Facing update (called by MovementController) ──────────
     public void SetFacing(FacingDirection dir) => Facing = dir;
+
+    public void NotifyWakeUp() => ForceTransition(CharState.WakeUp);
+    public void NotifyAttackRecoveryEnd() { /* recovery end */ }
 }

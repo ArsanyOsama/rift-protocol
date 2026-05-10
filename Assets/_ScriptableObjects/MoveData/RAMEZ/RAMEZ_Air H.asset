@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cf6d8a92624d24469a38f21ed35cb44, type: 3}
+  m_Name: RAMEZ_Air H
+  m_EditorClassIdentifier: 
+  moveName: RAMEZ_Air M
+  stateType: 14
+  attackType: 0
+  startupFrames: 5
+  activeFrames: 4
+  recoveryFrames: 10
+  hitstunFrames: 12
+  blockstunFrames: 10
+  hitFreezeFrames: 2
+  damage: 11
+  knockback: 1.5
+  causesKnockdown: 0
+  isLauncher: 0
+  hitLevel: 3
+  cancelableIntoSpecial: 0
+  cancelWindowStart: -1
+  startupSFX: {fileID: 0}
+  specialSFX: {fileID: 0}
+  screenShakeForce: 0

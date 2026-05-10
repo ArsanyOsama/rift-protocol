@@ -7,11 +7,15 @@ using UnityEngine;
 
 public enum FacingDirection { Left, Right }
 
+public enum AttackType { Punch, Kick, Special, Grab, Taunt }
+
 public enum BoxType { Hitbox, Hurtbox, Pushbox, ProximityGuard }
 
 public enum HitType { High, Mid, Low, Overhead, Projectile, Grab }
 
 public enum HitResult { Hit, Blocked, Trade, Whiff }
+
+public enum DashDirection { Forward, Backward }
 
 public enum FighterStateType
 {

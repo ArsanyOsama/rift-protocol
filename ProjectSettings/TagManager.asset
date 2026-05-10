@@ -5,6 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - FxTemporaire
+  - SkyboxCamera
+  - SpawnP1
+  - SpawnP2
   layers:
   - Default
   - TransparentFX
@@ -14,8 +17,8 @@ TagManager:
   - UI
   - Hitbox
   - Hurtbox
-  - 
-  - 
+  - SpawnP1
+  - SpawnP2
   - 
   - 
   - 

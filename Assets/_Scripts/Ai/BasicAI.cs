@@ -1,84 +1,76 @@
-// BasicAI.cs — Simple CPU opponent for single-player mode
-using System.Collections;
-using System.Collections.Generic;
+// Assets/_Scripts/AI/BasicAI.cs
 using UnityEngine;
+using System.Collections;
 
 public class BasicAI : MonoBehaviour
 {
-    [Header("AI Settings")]
-    public float reactionTime = 0.8f; // seconds between decisions
-    public float attackRange = 2.5f;  // world units — within this, it attacks
-    public float chaseRange = 8f;     // world units — within this, it walks toward player
+    private FighterControllerSimple _fighter;
+    private PhysicsBody _physics;
+    private CharacterState _target;
+    private bool _active = true;
 
+    // Difficulty-tuned values (set from GameFlowManager.AIDifficulty in Start)
+    private float _reactionTime = 0.7f;
+    private float _attackRange = 2.5f;
     [Range(0f, 1f)]
-    public float blockChance = 0.25f; // 25% chance to block incoming hits
-
-    private FighterControllerSimple _self;
-    private FighterControllerSimple _target;
-    private Animator _animator;
-    private bool _isActive = true;
+    private float _blockChance = 0.25f;
+    private float _jumpChance = 0.1f;
 
     void Start()
     {
-        _self = GetComponent<FighterControllerSimple>();
-        _animator = GetComponent<Animator>();
+        _fighter = GetComponent<FighterControllerSimple>();
+        _physics = GetComponent<PhysicsBody>();
 
-        // Find the human player automatically
-        foreach (var f in FindObjectsOfType<FighterControllerSimple>())
-        {
-            if (f != _self)
-            {
-                _target = f;
-                break;
-            }
-        }
+        foreach (var cs in FindObjectsOfType<CharacterState>())
+            if (cs != GetComponent<CharacterState>()) { _target = cs; break; }
+
+        int diff = GameFlowManager.AIDifficulty;
+        _reactionTime = diff switch { 0 => 1.2f, 1 => 0.7f, 2 => 0.35f, _ => 0.7f };
+        _blockChance = diff switch { 0 => 0.1f, 1 => 0.25f, 2 => 0.5f, _ => 0.25f };
 
         StartCoroutine(AILoop());
     }
 
     IEnumerator AILoop()
     {
-        while (_isActive)
+        while (_active)
         {
-            // Adds a bit of variety to the reaction time so it's not perfectly robotic
-            yield return new WaitForSeconds(reactionTime + Random.Range(-0.2f, 0.3f));
-
-            if (_target == null) continue;
+            yield return new WaitForSeconds(_reactionTime + Random.Range(-0.15f, 0.25f));
+            if (_target == null || _fighter == null) continue;
 
             float dist = Mathf.Abs(transform.position.x - _target.transform.position.x);
 
-            if (dist <= attackRange)
-                DoAttack();
-            else if (dist <= chaseRange)
-                MoveTowardPlayer();
-            else
-                DoIdle();
+            if (dist > _attackRange + 0.8f)
+                MoveToward();
+            else if (dist <= _attackRange)
+                AttackOrBlock();
+            else if (Random.value < _jumpChance && _physics.IsGrounded)
+                _fighter.SimulateJump();
         }
     }
 
-    void DoAttack()
+    void AttackOrBlock()
     {
-        // Pick a random attack weighted toward light attacks
-        float roll = Random.value;
+        if (Random.value < _blockChance)
+        {
+            _fighter.SimulateBlock(true);
+            return;
+        }
+        _fighter.SimulateBlock(false);
 
-        if (roll < 0.5f)
-            _animator.SetTrigger("LightAttack");
-        else if (roll < 0.8f)
-            _animator.SetTrigger("MediumAttack");
-        else
-            _animator.SetTrigger("HeavyAttack");
+        float r = Random.value;
+        if (r < 0.45f) _fighter.SimulateAttack(AttackWeight.Light);
+        else if (r < 0.75f) _fighter.SimulateAttack(AttackWeight.Medium);
+        else if (r < 0.90f) _fighter.SimulateAttack(AttackWeight.Heavy);
+        else _fighter.SimulateSpecial();
     }
 
-    void MoveTowardPlayer()
+    void MoveToward()
     {
+        _fighter.SimulateBlock(false);
         float dir = _target.transform.position.x > transform.position.x ? 1f : -1f;
-
-        // Tell PhysicsBody to move in this direction
-        GetComponent<PhysicsBody>()?.SetMoveInput(dir);
+        _physics.SetMoveInput(dir);
     }
 
-    void DoIdle()
-    {
-        GetComponent<PhysicsBody>()?.SetMoveInput(0f);
-    }
+    public void Deactivate() => _active = false;
 }

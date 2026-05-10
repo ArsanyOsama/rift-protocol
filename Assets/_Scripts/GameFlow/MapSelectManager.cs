@@ -7,14 +7,16 @@ public class MapSelectManager : MonoBehaviour
 {
     public static MapSelectManager Instance;
 
-    [Header("Map Prefabs — assign all 4 in Inspector")]
-    public GameObject[] mapPrefabs;     // [0]=VoidGrid, [1]=Forge, [2]=DeadRuins, [3]=RiftEdge
-    public Sprite[] mapPreviews;   // Isometric preview PNG per map
+    [Header("Map Prefabs — assign all 3 in Inspector")]
+    public GameObject[] mapPrefabs;
+    public Sprite[] mapPreviews;
 
     public static int P1MapVote = -1;
     public static int P2MapVote = -1;
     public static int SelectedMap = 2;  // default: Dead Ruins
     public static bool IsSinglePlayer = true;
+
+    // [FIX 5B] Removed _totalMaps = 3; We use mapPrefabs.Length dynamically!
 
     void Awake() { Instance = this; }
 

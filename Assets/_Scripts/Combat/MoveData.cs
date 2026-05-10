@@ -1,7 +1,3 @@
-// MoveData.cs — ScriptableObject holding all data for one move
-// Assets/_Scripts/Combat/MoveData.cs
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewMove", menuName = "RiftProtocol/MoveData")]
@@ -10,6 +6,9 @@ public class MoveData : ScriptableObject
     [Header("Identity")]
     public string moveName;
     public FighterStateType stateType;
+
+    // ADD — was referenced in FighterAnimationController but missing
+    public AttackType attackType = AttackType.Punch;
 
     [Header("Frame Data")]
     public int startupFrames = 4;
@@ -31,4 +30,10 @@ public class MoveData : ScriptableObject
     [Header("Cancel Windows")]
     public bool cancelableIntoSpecial = false;
     public int cancelWindowStart = 10;
+
+    // ADD — audio/feel fields referenced in FighterAnimationController
+    [Header("Feel")]
+    public AudioClip startupSFX;       // sound on attack startup
+    public AudioClip specialSFX;       // sound on special activation
+    public float screenShakeForce = 0f;  // 0 = no shake, >0 = impulse force
 }

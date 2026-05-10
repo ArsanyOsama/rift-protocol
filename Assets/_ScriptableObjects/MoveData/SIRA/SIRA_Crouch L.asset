@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveName: SIRA_Crouch L
   stateType: 11
+  attackType: 1
   startupFrames: 3
   activeFrames: 3
   recoveryFrames: 7
@@ -27,3 +28,6 @@ MonoBehaviour:
   hitLevel: 2
   cancelableIntoSpecial: 1
   cancelWindowStart: 3
+  startupSFX: {fileID: 0}
+  specialSFX: {fileID: 0}
+  screenShakeForce: 0

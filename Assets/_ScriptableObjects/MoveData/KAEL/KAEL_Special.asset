@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveName: KAEL_Special
   stateType: 16
+  attackType: 2
   startupFrames: 10
   activeFrames: 20
   recoveryFrames: 28
@@ -27,3 +28,6 @@ MonoBehaviour:
   hitLevel: 1
   cancelableIntoSpecial: 0
   cancelWindowStart: -1
+  startupSFX: {fileID: 0}
+  specialSFX: {fileID: 0}
+  screenShakeForce: 0

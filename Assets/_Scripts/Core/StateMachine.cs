@@ -1,4 +1,3 @@
-// StateMachine.cs
 // Assets/Scripts/Core/StateMachine.cs
 
 using System;
@@ -132,7 +131,6 @@ public abstract class TimedAttackState : FighterStateBase
         _frameCounter++;
 
         // 1. THE LANDING CANCEL MECHANIC
-        // If this is an air attack AND the physics body touches the ground, cancel the attack instantly!
         if ((StateType == FighterStateType.AirLightPunch || StateType == FighterStateType.AirHeavyKick) && Physics.IsGrounded)
         {
             Machine.TransitionTo(FighterStateType.Idle);
@@ -140,7 +138,6 @@ public abstract class TimedAttackState : FighterStateBase
         }
 
         // 2. NORMAL RECOVERY
-        // If the timer runs out, return to Idle (or Falling if still in the air)
         if (_frameCounter >= _totalDuration)
         {
             Machine.TransitionTo(Physics.IsGrounded ? FighterStateType.Idle : FighterStateType.Falling);
@@ -315,13 +312,6 @@ public class StateMachine : MonoBehaviour
     public static event Action<int> OnFighterDied;
     public static void RaiseFighterDied(int playerIndex) => OnFighterDied?.Invoke(playerIndex);
 
-    [Header("Health")]
-    public int maxHP = 100;
-    public int currentHP;
-
-    public System.Action<int, int> OnHPChanged;
-    public System.Action OnKO;
-
     [Header("Starting state")]
     [SerializeField] private FighterStateType _initialState = FighterStateType.Idle;
 
@@ -334,13 +324,14 @@ public class StateMachine : MonoBehaviour
 
     private PhysicsBody _physics;
     private FighterControllerSimple _fighter;
+    private CharacterState _charState;
 
     private void Awake()
     {
         _physics = GetComponent<PhysicsBody>();
         _fighter = GetComponent<FighterControllerSimple>();
+        _charState = GetComponent<CharacterState>();
 
-        currentHP = maxHP;
         BuildStateRegistry();
     }
 
@@ -352,16 +343,19 @@ public class StateMachine : MonoBehaviour
         FramesInCurrentState++;
     }
 
+    // REPLACE the entire TakeDamage method in StateMachine.cs with:
     public void TakeDamage(int amount)
     {
-        currentHP = Mathf.Max(0, currentHP - amount);
-        OnHPChanged?.Invoke(currentHP, maxHP);
-
-        if (currentHP <= 0)
-        {
-            OnKO?.Invoke();
-            ForceTransition(FighterStateType.Dead);
-        }
+        // Delegate entirely — CharacterState is the HP authority
+        _charState?.TakeDamage(
+            damage: amount,
+            hitstun: 12,
+            blockstun: 8,
+            knockback: 1.5f,
+            causesKnockdown: amount >= 22,
+            isBlocked: false,
+            hitFreezeFrames: 2
+        );
     }
 
     private void BuildStateRegistry()
@@ -507,8 +501,8 @@ public class StateMachine : MonoBehaviour
         CurrentStateType == FighterStateType.Falling ||
         CurrentStateType == FighterStateType.KnockdownFalling;
 
+    // [FIX 5A] Removed WalkBackward from IsBlocking
     public bool IsBlocking =>
         CurrentStateType == FighterStateType.BlockingStanding ||
-        CurrentStateType == FighterStateType.BlockingCrouching ||
-        CurrentStateType == FighterStateType.WalkBackward;
+        CurrentStateType == FighterStateType.BlockingCrouching;
 }

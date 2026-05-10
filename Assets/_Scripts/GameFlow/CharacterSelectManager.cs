@@ -1,50 +1,78 @@
-// CharacterSelectManager.cs
-// Assets/_Scripts/GameFlow/CharacterSelectManager.cs
-
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class CharacterSelectManager : MonoBehaviour
 {
-    [Header("Available characters — order must match GameManager.characterPrefabs")]
-    public string[] characterNames = { "KAEL", "SIRA", "HEMDAN", "RAMEZ" };
+    [Header("Character Data")]
+    public CharacterData[] characters; // ScriptableObjects with name, art, prefab
 
-    // Static so they survive the scene load
-    public static int P1Selection = 0;
-    public static int P2Selection = 1;
+    [Header("P1 UI")]
+    public Image p1CharDisplay;
+    public TMP_Text p1CharName;
 
-    [Header("UI Display")]
-    public TMP_Text p1NameDisplay;
-    public TMP_Text p2NameDisplay;
+    [Header("P2 UI")]
+    public Image p2CharDisplay;
+    public TMP_Text p2CharName;
+    public GameObject p2Column; // hide in single player
 
-    [Header("Single player mode toggle")]
-    public bool isSinglePlayer = false;
+    [Header("Confirm")]
+    public Button confirmButton;
 
-    // ── Called by UI buttons ──────────────────────────────────────────────────
-    public void P1SelectCharacter(int index)
+    private int _p1Selection = -1;
+    private int _p2Selection = -1;
+
+    void Start()
     {
-        P1Selection = Mathf.Clamp(index, 0, characterNames.Length - 1);
-        if (p1NameDisplay != null)
-            p1NameDisplay.text = characterNames[P1Selection];
+        p2Column.SetActive(GameFlowManager.IsMultiplayer);
+        confirmButton.interactable = false;
     }
 
-    public void P2SelectCharacter(int index)
+    public void SelectCharacter(int charIndex, int playerIndex)
     {
-        P2Selection = Mathf.Clamp(index, 0, characterNames.Length - 1);
-        if (p2NameDisplay != null)
-            p2NameDisplay.text = characterNames[P2Selection];
+        // Mutual lock-out — if other player already chose this, ignore
+        if (playerIndex == 0)
+        {
+            if (GameFlowManager.IsMultiplayer && _p2Selection == charIndex) return;
+            _p1Selection = charIndex;
+            p1CharDisplay.sprite = characters[charIndex].portrait;
+            p1CharName.text = characters[charIndex].displayName;
+            GameFlowManager.P1CharacterIndex = charIndex;
+        }
+        else
+        {
+            if (_p1Selection == charIndex) return;
+            _p2Selection = charIndex;
+            p2CharDisplay.sprite = characters[charIndex].portrait;
+            p2CharName.text = characters[charIndex].displayName;
+            GameFlowManager.P2CharacterIndex = charIndex;
+        }
+
+        CheckConfirmReady();
     }
 
-    public void StartFight()
+    void CheckConfirmReady()
     {
-        // Store single player preference on GameManager after load
-        PlayerPrefs.SetInt("SinglePlayer", isSinglePlayer ? 1 : 0);
-        SceneManager.LoadScene("MainGame");
+        bool ready = _p1Selection >= 0 &&
+                     (!GameFlowManager.IsMultiplayer || _p2Selection >= 0);
+        confirmButton.interactable = ready;
     }
 
-    public void ToggleSinglePlayer(bool value)
+    public void OnConfirm()
     {
-        isSinglePlayer = value;
+        // If single player, auto-set P2 from AI selection
+        SceneManager.LoadScene("MapSelect");
     }
+}
+
+// ScriptableObject for character metadata
+[CreateAssetMenu(fileName = "CharacterData", menuName = "RiftProtocol/CharacterData")]
+public class CharacterData : ScriptableObject
+{
+    public string displayName;
+    public string loreBlurb;
+    public Sprite portrait;
+    public Sprite fullBodyArt;
+    public GameObject fighterPrefab;
 }
