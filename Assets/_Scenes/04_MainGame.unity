@@ -151,10 +151,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1ab3307d5f19c8543afc7cfa15e5a57f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _fighterASource: {fileID: 0}
-  _fighterBSource: {fileID: 0}
-  _drawGizmos: 1
-  _gizmoAlpha: 0.35
 --- !u!4 &154169924
 Transform:
   m_ObjectHideFlags: 0
@@ -749,7 +745,7 @@ Transform:
   m_GameObject: {fileID: 1064797783}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -2.2435398, y: -6.5510454, z: 13.816}
+  m_LocalPosition: {x: -2.2435398, y: -6.5510454, z: 4.9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1091,23 +1087,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bd4d1b807078ed94f89734424e818de9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _camera: {fileID: 1064797786}
-  _fighterA: {fileID: 0}
-  _fighterB: {fileID: 0}
-  _stageLeft: -8
-  _stageRight: 8
-  _groundY: 0
-  _cameraLerpSpeed: 6
-  _cameraY: 3
-  _cameraZ: -10
-  _minCameraSize: 4
-  _maxCameraSize: 7
-  _minFighterDistance: 2
-  _maxFighterDistance: 12
-  _zoomLerpSpeed: 4
-  _cornerZoneWidth: 1.5
-  _cornerPushStrength: 5
-  _minSeparation: 0.8
 --- !u!4 &1579287223
 Transform:
   m_ObjectHideFlags: 0

@@ -124,6 +124,12 @@ MonoBehaviour:
   moveMedium: {fileID: 0}
   moveHeavy: {fileID: 0}
   moveSpecial: {fileID: 0}
+  moveCrouchLight: {fileID: 0}
+  moveCrouchMedium: {fileID: 0}
+  moveCrouchHeavy: {fileID: 0}
+  moveAirLight: {fileID: 0}
+  moveAirMedium: {fileID: 0}
+  moveAirHeavy: {fileID: 0}
   keyLeft: 97
   keyRight: 100
   keyCrouch: 115
@@ -187,7 +193,7 @@ Animator:
   m_GameObject: {fileID: 2619511874002624789}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: a041019a962f0b2429bc7a5103922ef7, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
